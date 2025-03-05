@@ -12,10 +12,10 @@ This repository provides Infrastructure as Code (IaC) examples for deploying **A
 ## 🚀 Deployment Examples
 This repository includes IaC examples for deploying Azure Managed Redis using:
 
-### 🔹 Terraform - (Coming Soon)
+### 🔹 Terraform
 - Define Redis instances using Terraform HCL.
 - Automate provisioning and configuration.
-- Example files: `terraform/main.tf`, `terraform/variables.tf`
+- Example files: `terraform/main.tf`, `terraform/outputs.tf`, `terraform/providers.tf`, `terraform/terraform.tfvars`, `terraform/variables.tf`
 
 ### 🔹 Bicep
 - Use Azure’s native infrastructure-as-code language.
@@ -51,10 +51,14 @@ az account set --subscription "<your-subscription-id>"
 
 ### 3️⃣ Deploy Using Your Preferred IaC Tool
 #### Terraform
-```sh
+
+Set variable values in `terraform/terraform.tfvars` (subscription id etc.)
+
+```bash
 cd terraform
 terraform init
-terraform apply
+terraform plan -out main.tfplan
+terraform apply "main.tfplan"
 ```
 #### Bicep
 ```sh

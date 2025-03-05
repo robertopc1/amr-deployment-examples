@@ -1,0 +1,5 @@
+subscription_id = "<your Azure subscription id>"
+resource_group_name = "<resource group to be created>"
+resource_group_location = "<region of the resource group, e.g. UK South>"
+cluster_name = "<name of the AMR cache to be created>"
+sku = "<AMR SKU, e.g. Balanced_B0>"
