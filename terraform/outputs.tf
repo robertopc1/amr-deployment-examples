@@ -1,11 +1,11 @@
-output "Endpoint" {
-  value = azapi_resource.amr_cluster.output.properties.hostName
+output "redis_location1_name" {
+  value = module.redis.redis_location1_name
 }
 
-output "Primary_Key" {
-  value = data.azapi_resource_action.listKeys.output.primaryKey
+output "redis_location1_id" {
+  value = module.redis.redis_location1_id
 }
 
-output "Secondary_Key" {
-  value = data.azapi_resource_action.listKeys.output.secondaryKey
+output "redis_location1_host_name" {
+  value = module.redis.redis_location1_host_name
 }
