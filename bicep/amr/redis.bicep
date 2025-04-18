@@ -1,3 +1,5 @@
+targetScope = 'resourceGroup'
+
 // Parameters
 @description('Required. Azure location to which the resources are to be deployed')
 param location string
@@ -115,15 +117,24 @@ param tags object = {}
 @description('Required. Enable High Availability')
 param haOption bool = true
 
-@description('Required. Application name')
-param applicationName string
+@description('Required. Workload name')
+param workloadName string
+
+@description('Required. Key Vault ')
+param keyVaultName string
+
+@description('Optional. Use Managed Identity for authentication. If false, key-based authentication will be used.')
+param useManagedIdentity bool = true
+
+@description('Required. the naming module')
+param naming object
 
 // Variables
 var resourceNames = {
-  redisLocation1Name: 'redis-${applicationName}-${location}'
-  redisLocation2Name: 'redis-${applicationName}-${location2}'
+  redisLocation1Name: naming.redisCache.nameUnique
+  redisLocation2Name: 'redis-${workloadName}-${location2}'
   redisDbName: 'default'
-  redisGeoReplicationGroupName: 'gr-${applicationName}'
+  redisGeoReplicationGroupName: 'gr-${workloadName}'
 }
 
 var rdbPersistence = persistenceOption == 'RDB' ? true : false
@@ -141,9 +152,12 @@ resource redisCluster1 'Microsoft.Cache/redisEnterprise@2024-09-01-preview' = {
     minimumTlsVersion: '1.2'
     highAvailability: enableHA
   }
-  identity: {
-    type: 'None'    
+  identity: useManagedIdentity ? {
+    type: 'SystemAssigned'
+  } : {
+    type: 'None'
   }
+  
   tags: tags
 }
 
@@ -151,7 +165,7 @@ resource redisCluster1Db 'Microsoft.Cache/redisEnterprise/databases@2024-09-01-p
   name: resourceNames.redisDbName
   parent: redisCluster1
   properties: {
-    accessKeysAuthentication: 'Enabled'
+    accessKeysAuthentication: useManagedIdentity ? 'Disabled' : 'Enabled'
     clientProtocol:'Encrypted'
     port: 10000
     clusteringPolicy: clusteringPolicy
@@ -174,7 +188,6 @@ resource redisCluster1Db 'Microsoft.Cache/redisEnterprise/databases@2024-09-01-p
        ]
     } : null
   }
-  
 }
 
 resource redisCluster2 'Microsoft.Cache/redisEnterprise@2024-09-01-preview' =  if(activeGeoReplicationEnabled) {
@@ -190,8 +203,10 @@ resource redisCluster2 'Microsoft.Cache/redisEnterprise@2024-09-01-preview' =  i
     minimumTlsVersion: '1.2'
     highAvailability: enableHA
   }
-  identity: {
-      type: 'None'    
+  identity: useManagedIdentity ? {
+    type: 'SystemAssigned'
+  } : {
+    type: 'None'
   }
   tags: tags
 }
@@ -200,6 +215,7 @@ resource redisLocation2Db 'Microsoft.Cache/redisEnterprise/databases@2024-09-01-
   name: resourceNames.redisDbName
   parent: redisCluster2
   properties: {
+    accessKeysAuthentication: useManagedIdentity ? 'Disabled' : 'Enabled'
     clientProtocol:'Encrypted'
     port: 10000
     clusteringPolicy: clusteringPolicy
@@ -226,6 +242,18 @@ resource redisLocation2Db 'Microsoft.Cache/redisEnterprise/databases@2024-09-01-
     }
   }
 }
+
+resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' existing = if(!useManagedIdentity) {
+  name: keyVaultName
+}
+
+resource redisPassword 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if(!useManagedIdentity) {
+  parent: keyVault
+  name: 'redisPassword'  // The first part is KV's name
+  properties: {
+   value: '${listKeys(redisCluster1.id, redisCluster1.apiVersion).keys[0].value}'
+  }
+ }
 
 //Output
 output redisLocation1Name string = redisCluster1.name

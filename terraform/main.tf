@@ -1,57 +1,39 @@
+locals {
+  default_tags = merge({
+    application = var.application_name
+  }, var.tags)
+}
+
 resource "azurerm_resource_group" "amr_rg" {
-  name     = var.resource_group_name
+  name     = "rg-${var.application_name}" # Dynamically build the resource group name
   location = var.resource_group_location
+
+  tags = local.default_tags
 }
 
-resource "azapi_resource" "amr_cluster" {
-  type = "Microsoft.Cache/redisEnterprise@2024-10-01"
-  name = var.cluster_name
-  parent_id = azurerm_resource_group.amr_rg.id
+module "keyvault" {
+  source = "./modules/keyvault"
 
-  location = azurerm_resource_group.amr_rg.location
+  count = var.use_managed_identities ? 0 : 1
 
-  tags = {
-    mytag = "tag value"
-  }
-
-  body = {
-    properties = {
-      minimumTlsVersion = "1.2"
-    }
-    sku = {
-      name = var.sku
-    }
-  }
+  application_name        = var.application_name
+  resource_group_name     = azurerm_resource_group.amr_rg.name
+  resource_group_location = var.resource_group_location
+  tags                    = local.default_tags
 }
 
-resource "azapi_resource" "amr_db" {
-  type = "Microsoft.Cache/redisEnterprise/databases@2024-10-01"
-  name = "default"
-  parent_id = azapi_resource.amr_cluster.id
+module "redis" {
+  source = "./modules/redis"
 
-  body = {
-    properties = {
-      clusteringPolicy = "EnterpriseCluster"
-      evictionPolicy = "NoEviction"
-      modules = [
-        {
-          name = "RediSearch"
-        },
-        {
-          name = "RedisJson"
-        }
-      ]
-      persistence = {
-        aofEnabled = true
-        aofFrequency = "1s"
-      }
-    }
+  providers = {
+    azapi = azapi
+    azurerm = azurerm
   }
-}
 
-data "azapi_resource_action" "listKeys" {
-  type = "Microsoft.Cache/redisEnterprise/databases@2024-10-01"
-  resource_id = azapi_resource.amr_db.id
-  action = "listKeys"
-  response_export_values = ["*"]
+  resource_group_id     = azurerm_resource_group.amr_rg.id
+  location              = var.resource_group_location
+  tags                  = local.default_tags
+  application_name      = var.application_name
+  use_managed_identity  = var.use_managed_identities
+  key_vault_id          = var.use_managed_identities ? null : module.keyvault[0].key_vault_id
 }
