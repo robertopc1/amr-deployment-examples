@@ -3,6 +3,12 @@ targetScope = 'subscription'
 @description('Optional. Azure main location to which the resources are to be deployed -defaults to the location of the current deployment')
 param location string = deployment().location
 
+@description('Optional. Azure second location to which the resources are to be deployed - defaults to westus')
+param location2 string = 'westus2'
+
+@description('Optional. Deploy active active -defaults to false')
+param activeGeoReplicationEnabled bool = false
+
 @description('Optional. The tags to be assigned to the created resources.')
 param tags object = {}
 
@@ -71,6 +77,8 @@ module redis 'redis.bicep' = {
   params: {
     keyVaultName: kv.outputs.keyVaultName
     location: location
+    location2: location2
+    activeGeoReplicationEnabled: activeGeoReplicationEnabled
     tags: defaultTags
     workloadName: workloadName
     useManagedIdentity: useManagedIdentity
