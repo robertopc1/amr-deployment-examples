@@ -14,4 +14,4 @@ redis-entraid==0.4.0b2
 requests==2.32.3
 six==1.17.0
 typing_extensions==4.13.2
-urllib3==2.4.0
+urllib3==2.6.3
